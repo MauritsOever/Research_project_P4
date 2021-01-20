@@ -17,24 +17,14 @@ SignalData$`P/L` <- 0
 Test <- left_join(SignalData, OptionData, by = "date")
 
 #Only show signal days that do not have NA ask values and only puts (for now).
-Test2 <- Test[(Test== 1 | Test$signal20 == -1) & !is.na(Test$ask) & Test$call.put == "P", ]
+Test2 <- Test[(Test$signal01 == 1 | Test$signal01 == -1) & !is.na(Test$ask) & Test$call.put == "P", ]
 
 for (i in 1: nrow(Test2)){
-  if(Test2$signal20[i] == -1 | Test2$signal20[i] == 1){
   #Calc cost
   cost = as.double(Test2$ask[i])
-  ST = SignalData$adjusted.close[SignalData$date == as.Date(Test2$expiration[i])]
+  ST = as.double(SignalData$adjusted.close[SignalData$date == as.Date(Test2$expiration[i])])
   #Calc P or L
-  Test2$`P/L`[i] <- max(Test2$strike[i] - ST, 0) - cost
-  }
-  if(Test2$signal20[i] == 1){
-    #Calc cost
-    cost = as.double(Test2$ask[i])
-    ST = SignalData$adjusted.close[SignalData$date == as.Date(Test2$expiration[i])]
-    #Calc P or L
-    Test2$`P/L`[i] <- max(ST - Test2$strike[i], 0) - cost
-
-  }
+  Test2$`P/L`[i] <- max(c(Test2$strike[i] - ST, 0)) - cost
 }
 
 #Test3 <- Test2[!duplicated(Test2$date), ]

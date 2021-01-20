@@ -7,7 +7,8 @@ library(data.table)
 library(TSA)
 library(plyr)
 
- setwd("/Users/connorstevens/Documents/Research Project/Crude Oil Data/CL_Data")
+
+setwd("/Users/connorstevens/Documents/Research Project/Crude Oil Data/CL_Data")
 
 ## Futures price data. ------------
 # Read first csv file.
@@ -19,69 +20,80 @@ futures.price$date = as.Date(as.character(futures.price$date), "%m/%d/%Y")
 futures.price$`future expiration` = as.Date(as.character(futures.price$`future expiration` ), "%m/%d/%Y")
 futures.price$expiration = as.Date(as.character(futures.price$expiration), "%m/%d/%Y")
 
-#Separate dataframes for calls and puts (will be rejoined later).
-#Calls <- data.frame(futures.price[futures.price$`call/put` == 'C'])
-#Puts <- data.frame(futures.price[futures.price$`call/put` == 'P'])
-
-#Change strike column in put and call strike 
-#names(Calls)[names(Calls) == "strike"] <- "CallStrike"
-#names(Calls)[names(Calls) == "strike"] <- "CallStrike"
-
-#Round to nearest 0.5 to match to ATM option.
-futures.price$`adjusted close` <- round_any(futures.price$`adjusted close`, 0.5)
-
-#Only ATM options.
-futures.price = futures.price[futures.price$`adjusted close` == futures.price$strike, ]
-
-# Reverse and remove duplicate dates. 
-futures.price <- futures.price %>% map_df(rev)
-
 #Create time to maturity column.
 futures.price$ttm <- futures.price$expiration - futures.price$date
 
 #Only options with ttm 15 days or less.
-futures.price <- futures.price[futures.price$ttm <= 15, ]
+futures.price <- futures.price[futures.price$ttm <= 15 & futures.price$ttm >= 5, ]
 
-#Futures price where ask is not zero.
-futures.price <- futures.price[futures.price$ask != 0, ]
+#Remove observations for which no data is available.
+futures.price <- futures.price[!(futures.price$ask == 0 & futures.price$`settlement price` == 0), ]
+
+#Option premium equal to ask.
+futures.price$option_premium <- futures.price$ask
+
+#Get as many prices as possible. First use ask, then if zero use settlement.
+for (i in 1: nrow(futures.price)){
+  if(futures.price$ask[i] == 0){
+    futures.price$option_premium[i] <-  futures.price$`settlement price`[i]
+  }
+  else{
+    futures.price$option_premium[i] <-  futures.price$ask[i]
+  }
+}
+
+# Chronological order
+#futures.price <- futures.price %>% map_df(rev)
+
 
 # Read all csv files and append underneath each other. 
 for (i in 2:88){
   print(file.names[i])
   df.temp <- fread(file.names[i], select = c(1, 6, 7, 8, 9, 10, 12, 13, 14))
   
+  #Remove NA values.
+  df.temp <- na.omit(df.temp)
+  
+  #Convert to date type.
   df.temp$date = as.Date(as.character(df.temp$date), "%m/%d/%Y")
   df.temp$`future expiration` = as.Date(as.character(df.temp$`future expiration` ), "%m/%d/%Y")
   df.temp$expiration = as.Date(as.character(df.temp$expiration), "%m/%d/%Y")
-  
-  #Round to nearest 0.5 to match to ATM option.
-  df.temp$`adjusted close` <- round_any(df.temp$`adjusted close`, 0.5)
-  
-  #Chronological order.
-  df.temp <- df.temp[rev(order(df.temp$date)), ]
-  
-  #Only ATM options.
-  df.temp = df.temp[df.temp$`adjusted close` == df.temp$strike, ]
-  #df.temp = df.temp[!duplicated(df.temp$date), ]
   
   #Create time to maturity column.
   df.temp$ttm <- df.temp$expiration - df.temp$date
   
   #Only options with ttm 15 days or less.
-  df.temp <- df.temp[df.temp$ttm <= 15, ]
+  df.temp <- df.temp[df.temp$ttm <= 15 & df.temp$ttm >= 5, ]
   
-  #Futures price where ask is not zero.
-  df.temp <- df.temp[df.temp$ask != 0, ]
+  #Remove observations for which no data is available.
+  df.temp <- df.temp[!(df.temp$ask == 0 & df.temp$`settlement price` == 0), ]
+  
+  #Option premium equal to ask.
+  df.temp$option_premium <- df.temp$ask
+  
+  #Get as many prices as possible. First use ask, then if zero use settlement.
+  for (i in 1: nrow(df.temp)){
+    if(df.temp$ask[i] == 0){
+      df.temp$option_premium[i] <-  df.temp$`settlement price`[i]
+    }
+    else if(df.temp$ask[i] > 0) {
+      df.temp$option_premium[i] <-  df.temp$ask[i]
+    }
+    else if(df.temp$ask[i] == 0){
+      df.temp$option_premium <- df.temp$`settlement price`
+    }
+    else{
+      df.temp <- df.temp[-i, ]
+    }
+    }
   
   futures.price = rbind(futures.price, df.temp)
-  #futures.price = futures.price[!duplicated(futures.price$date), ]
-  #futures.price <- futures.price[rev(order(futures.price$date)), ]
 }
 
 #Order data chronologically.
 futures.price <- arrange(futures.price, date)
 
-futures.price <- futures.price %>% map_df(rev)
+#futures.price <- futures.price %>% map_df(rev)
 
 # Plot. 
 plot(futures.price$date, futures.price$ask, type ='l')
