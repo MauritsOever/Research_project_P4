@@ -20,7 +20,8 @@ OptionData$expiration <- as.Date(OptionData$expiration)
 ReturnSignals$date <-  as.Date(ReturnSignals$date)
 
 #Create column to hold profit and loss for each signal.
-ReturnSignals$`P&L` <- 0
+ReturnSignals$`P&L_Puts` <- 0
+ReturnSignals$`P&L_PutsCalls` <- 0
 
 ##ASSUMING ONLY BUYING PUTS##
 
@@ -28,7 +29,7 @@ ReturnSignals$`P&L` <- 0
 PutData <- OptionData[OptionData$call.put == "P", ]
 
 for (j in 1: nrow(ReturnSignals)){
-  if(ReturnSignals$signal05[j] != 0){
+  if(ReturnSignals$signal20[j] != 0){
     
     #Get date.
     date <- as.Date(ReturnSignals$date[j])
@@ -71,7 +72,7 @@ for (j in 1: nrow(ReturnSignals)){
     ST <- ReturnSignals$adjusted.close[match(exp, ReturnSignals$date)]
     
     #Calc profit or loss for given signal.
-    ReturnSignals$`P&L`[j] <- max(c(strike - ST, 0)) - cost
+    ReturnSignals$`P&L_Puts`[j] <- max(c(strike - ST, 0)) - cost
   }
   # date <-  0
   # df_temp <- 0
@@ -83,4 +84,121 @@ for (j in 1: nrow(ReturnSignals)){
   # ST <- 0
 }
 
-sum(ReturnSignals$`P&L`)
+sum(ReturnSignals$`P&L_Puts`)
+#######################################################
+
+##ASSUMING ONLY BUYING PUTS AND CALLS##
+
+#Create dataframe for puts only.
+PutData <- OptionData[OptionData$call.put == "P", ]
+CallData <- OptionData[OptionData$call.put == "C", ]
+
+###PUT SIGNAL
+for (j in 1: nrow(ReturnSignals)){
+  if(ReturnSignals$signal20[j] == -1){
+    
+    #Get date.
+    date <- as.Date(ReturnSignals$date[j])
+    
+    #Limit dataframe to options available on a given day.
+    df_tempPut <- PutData[PutData$date == date, ]
+    
+    #Skip to next iteration if no options are available for that signal.
+    if(nrow(df_tempPut) == 0){
+      next
+    }
+    #Get spot on given day.
+    spot <-  ReturnSignals$adjusted.close[j]
+    
+    #Find strike closest to spot.
+    if(match.closest(spot, df_tempPut$strike, tolerance = 0.5, nomatch = 0) == 0){
+      strike <- 0
+    }
+    else{
+      #Set strike to closest strike available to adjusted close on signal day.
+      strike <-  df_tempPut$strike[match.closest(spot, df_tempPut$strike, tolerance = 0.5, nomatch = 0)]
+    }
+    
+    #If no option is found, skip to the next signal.
+    if(strike == 0){
+      next
+    }
+    
+    #Find index in df_temp of chosen option.
+    index <-  match.closest(spot, df_tempPut$strike, tolerance = 0.5, nomatch = 0)
+    
+    #Find expiry date of option.
+    exp <- as.Date(df_tempPut$expiration[index],)
+    
+    #Find option premium.
+    cost <- as.double(df_tempPut$option_premium[index])
+    
+    #Calc spot at option expiration.
+    ST <- ReturnSignals$adjusted.close[match(exp, ReturnSignals$date)]
+    
+    #Calc profit or loss for given signal.
+    ReturnSignals$`P&L_PutsCalls`[j] <- max(c(strike - ST, 0)) - cost
+  }
+###CALL SIGNAL
+  if(ReturnSignals$signal20[j] == 1){
+    #Get date.
+    date <- as.Date(ReturnSignals$date[j])
+    
+    #Limit dataframe to options available on a given day.
+    df_tempCall <- CallData[CallData$date == date, ]
+    
+    #Skip to next iteration if no options are available for that signal.
+    if(nrow(df_tempCall) == 0){
+      next
+    }
+    #Get spot on given day.
+    spot <-  ReturnSignals$adjusted.close[j]
+    
+    #Find strike closest to spot.
+    if(match.closest(spot, df_tempCall$strike, tolerance = 0.5, nomatch = 0) == 0){
+      strike <- 0
+    }
+    else{
+      #Set strike to closest strike available to adjusted close on signal day.
+      strike <-  df_tempCall$strike[match.closest(spot, df_tempCall$strike, tolerance = 0.5, nomatch = 0)]
+    }
+    
+    #If no option is found, skip to the next signal.
+    if(strike == 0){
+      next
+    }
+    
+    #Find index in df_temp of chosen option.
+    index <-  match.closest(spot, df_tempCall$strike, tolerance = 0.5, nomatch = 0)
+    
+    #Find expiry date of option.
+    exp <- as.Date(df_tempCall$expiration[index],)
+    
+    #Find option premium.
+    cost <- as.double(df_tempCall$option_premium[index])
+    
+    #Calc spot at option expiration.
+    ST <- ReturnSignals$adjusted.close[match(exp, ReturnSignals$date)]
+    
+    #Calc profit or loss for given signal.
+    ReturnSignals$`P&L_PutsCalls`[j] <- max(c(ST - strike, 0)) - cost
+  }
+  # date <-  0
+  # df_temp <- 0
+  # spot <- 0
+  # strike <- 0
+  # index <- 0
+  # exp <- 0
+  # cost <- 0
+  # ST <- 0
+}
+
+sum(ReturnSignals$`P&L_Puts`)
+
+# Plot. 
+plot(ReturnSignals$date, ReturnSignals$`P&L_Puts`, type ='l')
+
+sum(ReturnSignals$`P&L_PutsCalls`)
+
+# Plot. 
+plot(ReturnSignals$date, ReturnSignals$`P&L_PutsCalls`, type ='l')
