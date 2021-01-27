@@ -13,7 +13,7 @@ setwd("/Users/connorstevens/Documents/Research Project/Crude Oil Data/CL_Data")
 ## Futures price data. ------------
 # Read first csv file.
 file.names <- list.files(pattern="data_download.*csv")
-futures.price <- fread(file.names[1], select = c(1, 6, 7, 8, 9, 10, 12, 13, 14))
+futures.price <- fread(file.names[1], select = c(1, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16))
 
 # Fix dates.
 futures.price$date = as.Date(as.character(futures.price$date), "%m/%d/%Y")
@@ -49,7 +49,7 @@ for (i in 1: nrow(futures.price)){
 # Read all csv files and append underneath each other. 
 for (i in 2:88){
   print(file.names[i])
-  df.temp <- fread(file.names[i], select = c(1, 6, 7, 8, 9, 10, 12, 13, 14))
+  df.temp <- fread(file.names[i], select = c(1, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16))
   
   #Remove NA values.
   df.temp <- na.omit(df.temp)
@@ -101,7 +101,7 @@ plot(futures.price$date, futures.price$ask, type ='l')
 
 
 # Save as new dataframe. 
-write.csv(futures.price, "OptionData.csv")
+write.csv(futures.price, "OptionDataV2.csv")
 
 # ## Sentiment data. -------------
 # sen <- read.csv('indexSentimentSQLCRU_CRUOpt2003_2020.csv')
