@@ -3,6 +3,9 @@ library(MALDIquant)
 library(data.table)
 rm(list = ls())
 
+#change working directory.
+setwd("/Users/connorstevens/Documents/GitHub/Research_project_P4")
+
 #Import return forecasts.
 ReturnSignals <- read.csv("/Users/connorstevens/Documents/GitHub/Research_project_P4/arimax.csv",
                           stringsAsFactors = FALSE)
@@ -11,7 +14,7 @@ ReturnSignals <- read.csv("/Users/connorstevens/Documents/GitHub/Research_projec
 ReturnSignals$date <- as.Date(ReturnSignals$date)
 
 ##EVENT STUDY## 
-#Look fot top 10% of sentiment shocks and look at returns leading up to that day and following that day.
+#Look for top 10% of sentiment shocks and look at returns leading up to that day and following that day.
 
 #Get absolute value of sentiment value for which all values >= are in the upper decile.
 Top10Sent <- as.double(quantile(abs(ReturnSignals$sentiment), probs = 0.9, na.rm = TRUE))

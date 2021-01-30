@@ -6,6 +6,9 @@ library(psych)
 library(data.table)
 library(TSA)
 library(plyr)
+library(DescTools)
+library(MALDIquant)
+library(data.table)
 
 
 setwd("/Users/connorstevens/Documents/Research Project/Crude Oil Data/CL_Data")
@@ -93,15 +96,106 @@ for (i in 2:88){
 #Order data chronologically.
 futures.price <- arrange(futures.price, date)
 
-#futures.price <- futures.price %>% map_df(rev)
-
-# Plot. 
-plot(futures.price$date, futures.price$ask, type ='l')
-
 #Remove observations where implied volatility and/or interpolated implied vol is 1 or -1.
-futures.price <- futures.price[futures.price]
+futures.price <- futures.price[!(futures.price$iv == 1 | futures.price$iv == -1 | futures.price$iv == 0), ]
 
+#Order futures.price data frame in increasing order of strike so that it can be used with match.closest.
+futures.price <- futures.price[order(strike),]
 
+#Separate puts and calls.
+Calls <- futures.price[futures.price$`call/put` == "C"]
+Puts <- futures.price[futures.price$`call/put` == "P"]
+
+#Create ATM options dataframe
+ATMCalls <- Calls[FALSE, ]
+ATMPuts <- futures.price[FALSE, ]
+
+ATMCalls[1, ] <- df_temp_calls[160, ]
+ATMPuts[1, ] <- df_temp[184, ]
+
+for(i in 2: nrow(futures.price)){
+  
+  #Get date.
+  call_date <- Calls$date[i]
+  
+  #Limit dataframe to options available on a given day.
+  df_temp_calls <- Calls[Calls$date == call_date, ]
+  
+  #Skip to next iteration if no options are available for that signal.
+  if(nrow(df_temp_calls) == 0){
+    next
+  }
+  
+  #Get spot on given day.
+  call_spot <-  Calls$`adjusted close`[i]
+  
+  #Find strike closest to spot.
+  #strike <-  min(Closest(df_temp$strike, spot))
+  if(match.closest(call_spot, df_temp_calls$strike, tolerance = 0.5, nomatch = 0) == 0){
+    call_strike <- 0
+  }
+
+  else{
+    #Set strike to closest strike available to adjusted close on signal day.
+    call_strike <-  df_temp_calls$strike[match.closest(call_spot, df_temp_calls$strike, tolerance = 0.5, nomatch = 0)]
+  }
+  #If no option is found, skip to the next signal.
+  if(call_strike == 0){
+    next
+  }
+  
+  #Find index in df_temp of chosen option.
+  call_index <-  match.closest(call_spot, df_temp_calls$strike, tolerance = 0.5, nomatch = 0)
+  
+  #Fill ATM options dataframe with atm options.
+  ATMCalls <- rbind(ATMCalls, df_temp_calls[index, ])
+  
+}
+
+for(i in 2: nrow(futures.price)){
+  
+  #Get date.
+  call_date <- Calls$date[i]
+  put_date <- Puts$date[i]
+  
+  #Limit dataframe to options available on a given day.
+  df_temp_calls <- Calls[Calls$date == call_date, ]
+  df_temp_puts <- futures.price[Puts$date == put_date, ]
+  
+  #Skip to next iteration if no options are available for that signal.
+  if(nrow() == 0){
+    next
+  }
+  
+  #Get spot on given day.
+  call_spot <-  Calls$`adjusted close`[i]
+  put_spot <- Puts$`adjusted close`[i]
+  
+  #Find strike closest to spot.
+  #strike <-  min(Closest(df_temp$strike, spot))
+  if(match.closest(call_spot, df_temp_calls$strike, tolerance = 0.5, nomatch = 0) == 0){
+    call_strike <- 0
+  }
+  if(match.closest(put_spot, df_temp_puts$strike, tolerance = 0.5, nomatch = 0) == 0){
+    put_strike <- 0
+  }
+  else{
+    #Set strike to closest strike available to adjusted close on signal day.
+    call_strike <-  df_temp_calls$strike[match.closest(call_spot, df_temp_calls$strike, tolerance = 0.5, nomatch = 0)]
+    put_strike <-  df_temp_puts$strike[match.closest(put_spot, df_temp_puts$strike, tolerance = 0.5, nomatch = 0)]
+  }
+  
+  #If no option is found, skip to the next signal.
+  if(strike == 0){
+    next
+  }
+  
+  #Find index in df_temp of chosen option.
+  index <-  match.closest(spot, df_temp$strike, tolerance = 0.5, nomatch = 0)
+  
+  #Fill ATM options dataframe with atm options.
+  ATMoptions <- rbind(ATMoptions, df_temp[index, ])
+}
 
 # Save as new dataframe. 
 write.csv(futures.price, "OptionDataV2.csv")

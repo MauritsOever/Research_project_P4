@@ -21,12 +21,12 @@ ReturnSignals$date <- as.Date(ReturnSignals$date)
 
 #Calculate start of top positive decile.(In other words, top 10 most positive sentiment days).
 PosTopDecile <- quantile(ReturnSignals$sentiment[ReturnSignals$sentiment > 0],
-                         probs = 0.9,
+                         probs = 0.8,
                          na.rm = TRUE)
 
 #Calculate start of top negative decile.(In other words, top 10 most negative sentiment days).
 NegTopDecile <- quantile(ReturnSignals$sentiment[ReturnSignals$sentiment < 0],
-                         probs = 0.1,
+                         probs = 0.2,
                          na.rm = TRUE)
 
 #Get top 10% of positive sentiment values.
@@ -39,12 +39,12 @@ Top10NegSent <- ReturnSignals[ReturnSignals$sentiment <= NegTopDecile, ]
 
 #Calculate start of top positive decile.(In other words, top 10 most positive sentiment days).
 PosTopDecileDsent<- quantile(ReturnSignals$d_sent[ReturnSignals$d_sent > 0],
-                         probs = 0.9,
+                         probs = 0.8,
                          na.rm = TRUE)
 
 #Calculate start of top negative decile.(In other words, top 10 most negative sentiment days).
 NegTopDecileDsent <- quantile(ReturnSignals$d_sent[ReturnSignals$d_sent < 0],
-                         probs = 0.1,
+                         probs = 0.2,
                          na.rm = TRUE)
 
 #Get top 10% of positive sentiment values.
